@@ -3,8 +3,6 @@ st.set_page_config(layout="wide")
 
 import pandas as pd
 import numpy as np
-import math
-import os
 
 from pyXSteam.XSteam import XSteam
 steamTable = XSteam(XSteam.UNIT_SYSTEM_MKS) # m/kg/sec/°C/bar/W
@@ -38,38 +36,46 @@ c1, c2, c3 = st.columns(3)
 c2.markdown("# Capstone Model")
 c2.image("sam.jpg")
 
+opts_headerDia = [12,20]
+opts_inletDia = [0.5,1, 1.5, 2, 3]
+opts_tubeDia = [1, 1.5, 2, 3]
+opts_condDia = [0.5, 0.75, 1, 1.5, 2, 3]
+
+
 
 st.markdown("### Piping Component Variables")
 c1, c2, c3, c4, c5, c6 = st.columns(6)
 
-dia_inlet = float(c1.text_input(label="Inlet Diameter [in]", value=1.75)) * 0.0254
+dia_inlet = float(c1.selectbox(label="Inlet Diameter [in]", options=opts_inletDia)) * 0.0254
 
 insulated = bool(c2.selectbox(label="Insulated?", options=[False, True]))
-thick_insul = float(c2.text_input(label="Insulation Thickness [in]", value=0.5)) * 0.0254
+thick_insul = float(c2.text_input(label="Insulation Thickness [in]", value=0.25)) * 0.0254
 
-dia_header = float(c3.text_input(label="Header Diameter [in]", value=12)) * 0.0254
+dia_header = float(c3.selectbox(label="Header Diameter [in]", options=opts_headerDia)) * 0.0254
 len_header = float(c3.text_input(label="Header Length [in] (to dist tube)", value=12)) * 0.0254
 
-dia_tube = float(c4.text_input(label="Distribution Tube Diameter [in]", value=3)) * 0.0254
+dia_tube = float(c4.selectbox(label="Distribution Tube Diameter [in]", options=opts_tubeDia)) * 0.0254
 len_tube = float(c4.text_input(label="Distribution Tube Length [in]", value=10)) * 0.0254
 
 dia_nozzle = float(c5.selectbox(label="Nozzle Diameter [in]", options=[str(1/4), str(1/8), str(1/16)])) * 0.0254
 num_nozzles = float(c5.text_input(label="Number of Nozzles", value=str(100)))
-dia_cond = float(c6.text_input(label="Condensate Drainage Line Diameter [in]", value=str(0.75))) * 0.0254
+
+dia_cond = float(c6.selectbox(label="Condensate Drainage Line Diameter [in]", options=opts_condDia)) * 0.0254
 
 st.markdown("### Inlet Steam Conditions")
 
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4 = st.columns(4)
 dryfract_in = float(c1.text_input(label="Dryness Ratio of Inlet Steam", value=0.65))
 tsteam = float(c2.text_input(label="Inlet Steam Temperature [C]", value=100))
 p_in = float(c3.text_input(label="Inlet Pressure [atm]", value=1))
 v_in = float(c4.text_input(label="Inlet Flow Rate [m3/hr]", value=14)) / ((dia_inlet/2)**2 * np.pi * 3600)
-z_in = float(c5.text_input(label="Inlet Height [m]", value=0))
+z_in = 0
 
 st.markdown("### Assumptions")
 st.write("""
 - Pressure across the SAM-e is atmostpheric, this includes both the nozzles and condensate drainage \n
 - The SAM-e is made out of 304SS, with a conductivity constant k of 16.2 W/mk, Radiation and Convection were not considered \n
+- Minor and Major Line Losses were not considered \n
 - The averge height of the nozzles is half the height of the distribution tube, as the nozzles are evenly distributed across them \n
 - The height of the inlet and condensate lines are at 0m \n
 - The nozzle design completely removes all entrained liquid in the vapour stream so only vapor exits through the nozzles, and only liquid exits through the condensate drainage line
@@ -107,9 +113,9 @@ def calc_mdot(mdot_v_in, mdot_dia, mdot_x, mdot_pressure):
 #Heat Losses Calcs
 def ht_cond(length, t_inner, t_amb, dia_pipe, thickness, konductivity, insulated):
   if insulated:
-    cond_losses = 2 * np.pi * length * (t_inner - t_amb) / (((math.log(((dia_pipe/2) + thickness) / (dia_pipe/2))) / konductivity) + ((math.log(((dia_pipe/2) + thickness + thick_insul) / ((dia_pipe/2) + thickness))) / konduct_air))
+    cond_losses = 2 * np.pi * length * (t_inner - t_amb) / (((np.log(((dia_pipe/2) + thickness) / (dia_pipe/2))) / konductivity) + ((np.log(((dia_pipe/2) + thickness + thick_insul) / ((dia_pipe/2) + thickness))) / konduct_air))
   else:
-    cond_losses = 2 * np.pi * length * (t_inner - t_amb) / ((math.log(((dia_pipe/2) + thickness) / (dia_pipe/2) ))/konductivity)
+    cond_losses = 2 * np.pi * length * (t_inner - t_amb) / ((np.log(((dia_pipe/2) + thickness) / (dia_pipe/2) ))/konductivity)
   return cond_losses
 
 def q_losses(t_in, t_amb, mdot_in, mdot_nozzle, insulated):
@@ -138,7 +144,7 @@ def calc_dryfractOut(in_dryfract, pamb, tamb, tsteam, vel_in, dia_in, dia_header
   mdot_in = calc_mdot(vel_in, dia_in, in_dryfract, p_in)
   u_in = calc_u(in_dryfract, p_in)
   row_in = 1 / (calc_sv(in_dryfract, p_in))
-  energy_in = (p_in*101325/row_in)*math.log(p_in*101325)*mdot_in +  mdot_in * (vel_in**2)/2 + g * z_in * mdot_in + u_in*mdot_in
+  energy_in = (p_in*101325/row_in)*np.log(p_in*101325)*mdot_in +  mdot_in * (vel_in**2)/2 + g * z_in * mdot_in + u_in*mdot_in
   dryfractguess_out = 1
   error = 1000
   mdot_nozzle = mdot_in * dryfract_in
@@ -155,8 +161,8 @@ def calc_dryfractOut(in_dryfract, pamb, tamb, tsteam, vel_in, dia_in, dia_header
     row_cond =  1 / calc_sv(0, p_nozzle)  #100% liquid
     vel_nozzle = mdot_nozzle / (A_nozzle * row_nozzle)
     vel_cond = mdot_cond / (A_cond * row_cond)
-    energy_nozzle = (p_nozzle*101325/row_nozzle)*math.log(p_nozzle*101325)*mdot_nozzle +  mdot_nozzle*(vel_nozzle**2)/2 + g*z_nozzle*mdot_nozzle + uguess_nozzle*mdot_nozzle
-    energy_cond = (p_cond*101325/row_cond)*math.log(p_cond*101325)*mdot_cond +  mdot_cond*(vel_cond**2)/2 + g*z_cond*mdot_cond + uguess_cond*mdot_cond
+    energy_nozzle = (p_nozzle*101325/row_nozzle)*np.log(p_nozzle*101325)*mdot_nozzle +  mdot_nozzle*(vel_nozzle**2)/2 + g*z_nozzle*mdot_nozzle + uguess_nozzle*mdot_nozzle
+    energy_cond = (p_cond*101325/row_cond)*np.log(p_cond*101325)*mdot_cond +  mdot_cond*(vel_cond**2)/2 + g*z_cond*mdot_cond + uguess_cond*mdot_cond
     error = energy_in - (energy_nozzle + energy_cond) - q_dot
     print(error, dryfractguess_out)
     if abs(error) < 0.1:
@@ -176,16 +182,18 @@ def calc_dryfractOut(in_dryfract, pamb, tamb, tsteam, vel_in, dia_in, dia_header
         break
     
   dryfract_out = dryfractguess_out
-  return dryfract_out, q_dot
+  return dryfract_out, q_dot, vel_nozzle
 
 button = st.button("Calculate")
 
 if button:
-    dfo, qd = calc_dryfractOut(dryfract_in, pamb, tamb, tsteam, v_in, dia_inlet, dia_header, z_in, A_nozzle, A_cond, insulated)
+    dfo, qd, v_out = calc_dryfractOut(dryfract_in, pamb, tamb, tsteam, v_in, dia_inlet, dia_header, z_in, A_nozzle, A_cond, insulated)
     st.session_state["qdot"] = qd
     st.session_state["liqfract"] = dfo
 
     st.markdown("### Results")
     st.write("Heat Losses per second: " + str(np.round(st.session_state['qdot'],2)) + " KJ/s")
     st.write("Vapor Percentage of Outgoing Steam: " + str(np.round(st.session_state['liqfract'],4) * 100) + " %")
+    st.write("Nozzle Steam Exit Velocity: " + str(np.round(v_out,4)) + " m/s")
+
 
