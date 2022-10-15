@@ -37,7 +37,7 @@ c2.markdown("# Capstone Model")
 c2.image("sam.jpg")
 
 opts_headerDia = [12,20]
-opts_inletDia = [0.5,1, 1.5, 2, 3]
+opts_inletDia = [1, 1.5, 2, 3]
 opts_tubeDia = [1, 1.5, 2, 3]
 opts_condDia = [0.5, 0.75, 1, 1.5, 2, 3]
 
