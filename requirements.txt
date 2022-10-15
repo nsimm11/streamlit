@@ -1,7 +1,4 @@
 pandas
 streamlit
-
 numpy
-os
-
 pyXSteam
