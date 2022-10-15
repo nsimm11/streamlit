@@ -2,7 +2,6 @@ pandas
 streamlit
 
 numpy
-math
 os
 
 pyXSteam
