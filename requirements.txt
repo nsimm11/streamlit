@@ -1,2 +1,6 @@
 pandas
 streamlit
+matplotlib
+os
+math
+pyXSteam
